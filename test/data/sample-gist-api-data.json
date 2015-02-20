@@ -1,0 +1,80 @@
+{
+  "url": "https://api.github.com/gists/1bd61d7c9c68afb7fdda",
+  "forks_url": "https://api.github.com/gists/1bd61d7c9c68afb7fdda/forks",
+  "commits_url": "https://api.github.com/gists/1bd61d7c9c68afb7fdda/commits",
+  "id": "1bd61d7c9c68afb7fdda",
+  "git_pull_url": "https://gist.github.com/1bd61d7c9c68afb7fdda.git",
+  "git_push_url": "https://gist.github.com/1bd61d7c9c68afb7fdda.git",
+  "html_url": "https://gist.github.com/1bd61d7c9c68afb7fdda",
+  "files": {
+    "test.go": {
+      "filename": "test.go",
+      "type": "text/plain",
+      "language": "Go",
+      "raw_url": "https://gist.githubusercontent.com/maxmcd/1bd61d7c9c68afb7fdda/raw/94eef53cfa3f3dbac4504e2580f7be849326558d/test.go",
+      "size": 15,
+      "truncated": false,
+      "content": "these are words"
+    }
+  },
+  "public": false,
+  "created_at": "2015-02-19T01:51:07Z",
+  "updated_at": "2015-02-19T01:51:08Z",
+  "description": "",
+  "comments": 0,
+  "user": null,
+  "comments_url": "https://api.github.com/gists/1bd61d7c9c68afb7fdda/comments",
+  "owner": {
+    "login": "maxmcd",
+    "id": 283903,
+    "avatar_url": "https://avatars.githubusercontent.com/u/283903?v=3",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/maxmcd",
+    "html_url": "https://github.com/maxmcd",
+    "followers_url": "https://api.github.com/users/maxmcd/followers",
+    "following_url": "https://api.github.com/users/maxmcd/following{/other_user}",
+    "gists_url": "https://api.github.com/users/maxmcd/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/maxmcd/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/maxmcd/subscriptions",
+    "organizations_url": "https://api.github.com/users/maxmcd/orgs",
+    "repos_url": "https://api.github.com/users/maxmcd/repos",
+    "events_url": "https://api.github.com/users/maxmcd/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/maxmcd/received_events",
+    "type": "User",
+    "site_admin": false
+  },
+  "forks": [
+
+  ],
+  "history": [
+    {
+      "user": {
+        "login": "maxmcd",
+        "id": 283903,
+        "avatar_url": "https://avatars.githubusercontent.com/u/283903?v=3",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/maxmcd",
+        "html_url": "https://github.com/maxmcd",
+        "followers_url": "https://api.github.com/users/maxmcd/followers",
+        "following_url": "https://api.github.com/users/maxmcd/following{/other_user}",
+        "gists_url": "https://api.github.com/users/maxmcd/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/maxmcd/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/maxmcd/subscriptions",
+        "organizations_url": "https://api.github.com/users/maxmcd/orgs",
+        "repos_url": "https://api.github.com/users/maxmcd/repos",
+        "events_url": "https://api.github.com/users/maxmcd/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/maxmcd/received_events",
+        "type": "User",
+        "site_admin": false
+      },
+      "version": "556e932f7ea10f0fc14039b8fd7947c8905e339a",
+      "committed_at": "2015-02-19T01:51:07Z",
+      "change_status": {
+        "total": 1,
+        "additions": 1,
+        "deletions": 0
+      },
+      "url": "https://api.github.com/gists/1bd61d7c9c68afb7fdda/556e932f7ea10f0fc14039b8fd7947c8905e339a"
+    }
+  ]
+}
