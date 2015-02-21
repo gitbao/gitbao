@@ -1,12 +1,8 @@
 package main
 
 import (
-	"fmt"
-	"io"
-	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"text/template"
 	"time"
 
@@ -26,52 +22,7 @@ func main() {
 	http.Handle("/", r)
 	go http.ListenAndServe(":8000", nil)
 
-	http.ListenAndServe(":8001", &Router{})
-}
-
-type Router struct{}
-
-func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	host := req.Host
-	// host = strings.TrimSpace(host)
-	//Figure out if a subdomain exists in the host given.
-	host_parts := strings.Split(host, ".")
-	fmt.Println(host_parts)
-	if len(host_parts) > 2 {
-		//The subdomain exists, we store it as the first element
-		//in a new array
-		subdomain := host_parts[0]
-		// subdomain = "ba67234b79784c75cfd9-1"
-		destination, err := router.GetDestinaton(subdomain)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-			return
-		}
-		_ = destination
-		// Log if requested
-
-		// We'll want to use a new client for every request.
-		client := &http.Client{}
-
-		// Tweak the request as appropriate:
-		//	RequestURI may not be sent to client
-		//	URL.Scheme must be lower-case
-		req.RequestURI = ""
-		req.URL.Scheme = "http"
-		// req.URL = destination
-		req.URL.Host = destination
-		// And proxy
-		resp, err := client.Do(req)
-		if err != nil {
-			log.Fatal(err)
-		}
-		io.Copy(w, resp.Body)
-		// resp.Write(w)
-		return
-	}
-	w.WriteHeader(http.StatusNotFound)
-
+	http.ListenAndServe(":8001", &router.Router{})
 }
 
 func IndexHandler(w http.ResponseWriter, req *http.Request) {

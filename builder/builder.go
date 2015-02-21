@@ -33,6 +33,8 @@ func StartBuild(b *model.Bao) error {
 	b.IsComplete = true
 	model.DB.Save(b)
 
+	err = os.RemoveAll(directory)
+
 	return nil
 }
 

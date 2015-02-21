@@ -31,6 +31,15 @@ func TestDownloadFromRepo(t *testing.T) {
 	}
 }
 
+func TestWriteToBao(t *testing.T) {
+	testText := "This is some text"
+	model.DB.Create(&bao)
+	writeToBao(&bao, testText)
+	if bao.Console != testText+"\n" {
+		t.Errorf("Not writing to bao correctly")
+	}
+}
+
 func TestCreateDockerfile(t *testing.T) {
 	err := CreateDockerfile(".")
 	if err != nil {
