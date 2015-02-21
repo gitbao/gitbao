@@ -1,24 +1,81 @@
 package main
 
 import (
+	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"text/template"
 	"time"
 
 	"github.com/gitbao/gitbao/builder"
 	"github.com/gitbao/gitbao/github"
 	"github.com/gitbao/gitbao/model"
+	"github.com/gitbao/gitbao/router"
 	"github.com/sqs/mux"
 )
 
 func main() {
 	r := mux.NewRouter()
 	r.StrictSlash(true)
+	r.HandleFunc("/", IndexHandler).Methods("GET")
 	r.HandleFunc("/{username}/{gist-id}", DownloadHandler).Methods("GET")
 	r.HandleFunc("/poll/{id}/{line-count}/", PollHandler).Methods("GET")
 	http.Handle("/", r)
-	http.ListenAndServe(":8000", nil)
+	go http.ListenAndServe(":8000", nil)
+
+	http.ListenAndServe(":8001", &Router{})
+}
+
+type Router struct{}
+
+func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	host := req.Host
+	// host = strings.TrimSpace(host)
+	//Figure out if a subdomain exists in the host given.
+	host_parts := strings.Split(host, ".")
+	fmt.Println(host_parts)
+	if len(host_parts) > 2 {
+		//The subdomain exists, we store it as the first element
+		//in a new array
+		subdomain := host_parts[0]
+		// subdomain = "ba67234b79784c75cfd9-1"
+		destination, err := router.GetDestinaton(subdomain)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			return
+		}
+		_ = destination
+		// Log if requested
+
+		// We'll want to use a new client for every request.
+		client := &http.Client{}
+
+		// Tweak the request as appropriate:
+		//	RequestURI may not be sent to client
+		//	URL.Scheme must be lower-case
+		req.RequestURI = ""
+		req.URL.Scheme = "http"
+		// req.URL = destination
+		req.URL.Host = destination
+		// And proxy
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Fatal(err)
+		}
+		io.Copy(w, resp.Body)
+		// resp.Write(w)
+		return
+	}
+	w.WriteHeader(http.StatusNotFound)
+
+}
+
+func IndexHandler(w http.ResponseWriter, req *http.Request) {
+	w.Write([]byte("index"))
 }
 
 func DownloadHandler(w http.ResponseWriter, req *http.Request) {
@@ -35,6 +92,12 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	_ = model.DB.Create(&bao)
+
+	stringId := strconv.Itoa(int(bao.Id))
+	bao.Location = model.Location{
+		Destination: "localhost:8000",
+		Subdomain:   bao.GistId + "-" + stringId,
+	}
 
 	bao.Console = "Welcome to GitBao!!\n" +
 		"Getting ready to wrap up a tasty new Bao.\n" +
@@ -102,6 +165,10 @@ func PollHandler(w http.ResponseWriter, req *http.Request) {
 		}
 		time.Sleep(time.Second * 2)
 	}
+}
+
+func RouterHandler(w http.ResponseWriter, req *http.Request) {
+	w.Write([]byte("hello"))
 }
 
 const siteBody = `

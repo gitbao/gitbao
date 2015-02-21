@@ -11,7 +11,7 @@ func init() {
 	}
 }
 
-func getDestinaton(subdomain string) (
+func GetDestinaton(subdomain string) (
 	destination string, err error) {
 
 	val, exists := destinations[subdomain]

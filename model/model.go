@@ -9,6 +9,7 @@ var DB gorm.DB
 
 type Location struct {
 	Id          int64
+	BaoId       int64
 	Subdomain   string
 	Destination string
 }
@@ -21,7 +22,6 @@ type Bao struct {
 	IsComplete bool
 	GitPullUrl string `sql:"type:text;"`
 	Location   Location
-	LocationId int64
 	Files      []File
 }
 
