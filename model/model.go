@@ -15,9 +15,11 @@ type Location struct {
 
 type Bao struct {
 	Id         int64
-	GistId     string
-	Url        string
-	GitPullUrl string
+	GistId     string `sql:"type:text;"`
+	Url        string `sql:"type:text;"`
+	Console    string `sql:"type:text;"`
+	IsComplete bool
+	GitPullUrl string `sql:"type:text;"`
 	Location   Location
 	LocationId int64
 }
