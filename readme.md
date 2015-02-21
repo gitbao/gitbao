@@ -14,9 +14,12 @@ Wrapping up your github gists into delicious cloud-shaped buns.
      + `http://api.github.com/gists/1bd61d7c9c68afb7fdda`
      + Grab `files`, `git_pull_url`
      + Fallback is `https://gist.github.com/maxmcd/1bd61d7c9c68afb7fdda.json`
- - The files array must be processed. We could have a metadata file format so that users can define the port to broadcast on. Default it 8000. 
- - Port to serve can be passed as a url param as well
- - Parse import block, not sure how to do this. Might need to actually detect it in file.
+ - Redirect to config URL for application. `https://gitbao.com/subdomain`
+     + This page allows for setting of ENV variables and other configuration. 
+     + "deploy" button
+     + Expires in 24hrs
+     + Deplying triggers build on build server, logs streamed in with errors
+     + Option to update and redeploy from same gist
  - Build server in docker, build logs stream right to the browser with long polling. 
      + Could get files from githubusercontent, although not sure about rate limits. 
      + Could download file from .git endpoint as well, likely the best way
