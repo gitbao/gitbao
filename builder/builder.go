@@ -1,7 +1,10 @@
 package builder
 
 import (
+	"bytes"
+	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 
 	"github.com/gitbao/gitbao/model"
@@ -21,6 +24,10 @@ func StartBuild(b *model.Bao) error {
 	if err != nil {
 		writeToBao(b, "Error creating dockerfile")
 		return err
+	}
+	err = BuildDockerfile(b, directory)
+	if err != nil {
+		writeToBao(b, err.Error()+"\nquitting...")
 	}
 
 	b.IsComplete = true
@@ -47,6 +54,41 @@ func CreateDockerfile(path string) error {
 	contents := "FROM golang:onbuild\nEXPOSE 8080"
 	err := ioutil.WriteFile(path+"/Dockerfile", []byte(contents), 0644)
 	return err
+}
+
+func BuildDockerfile(b *model.Bao, path string) error {
+	cmd := exec.Command("sudo", "docker", "build", "-t", "outyet", path)
+	var stdobuild bytes.Buffer
+	// var stdebuild bytes.Buffer
+	cmd.Stdout = &stdobuild
+	cmd.Stderr = &stdobuild
+	err := cmd.Run()
+
+	buildError := stdobuild.Bytes()
+	if err != nil {
+		return fmt.Errorf("Error building application: \n%s", string(buildError))
+	}
+
+	writeToBao(b, "Application built successfully\nStarting application:")
+
+	// writeToBao(b, string(stdobuild.Bytes()))
+	cmd = exec.Command("sudo", "docker", "run",
+		"--publish", "6060:8080",
+		"--name", path,
+		"--detach",
+		"outyet",
+	)
+	// var stdorun bytes.Buffer
+	// var stderun bytes.Buffer
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("Error running application\n")
+	}
+
+	// writeToBao(b, string(stderun.Bytes()))
+	return nil
 }
 
 func runCommand(b *model.Bao, command string, args ...string) error {
