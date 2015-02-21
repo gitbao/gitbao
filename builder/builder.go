@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os/exec"
 
@@ -91,7 +90,6 @@ func runCommand(b *model.Bao, command string, args ...string) error {
 
 func writeToBao(b *model.Bao, text string) error {
 	b.Console = b.Console + text + "\n"
-	fmt.Println(b.Console)
 	model.DB.Save(b)
 	return nil
 }

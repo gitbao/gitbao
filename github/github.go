@@ -76,6 +76,13 @@ func GetData(b model.Bao) (model.Bao, error) {
 	if err != nil {
 		return b, err
 	}
+	for key, value := range responseStruct.Files {
+		b.Files = append(b.Files, model.File{
+			Filename: key,
+			Language: value.Language,
+		})
+	}
+
 	b.Url = responseStruct.Html_url
 	b.GitPullUrl = responseStruct.Git_pull_url
 	return b, nil

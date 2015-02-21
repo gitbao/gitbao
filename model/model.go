@@ -22,6 +22,14 @@ type Bao struct {
 	GitPullUrl string `sql:"type:text;"`
 	Location   Location
 	LocationId int64
+	Files      []File
+}
+
+type File struct {
+	Id       int64
+	BaoId    int64
+	Filename string
+	Language string
 }
 
 func init() {
@@ -34,6 +42,7 @@ func init() {
 
 	DB.DropTableIfExists(&Location{})
 	DB.DropTableIfExists(&Bao{})
+	DB.DropTableIfExists(&File{})
 
-	DB.AutoMigrate(&Location{}, &Bao{})
+	DB.AutoMigrate(&Location{}, &Bao{}, &File{})
 }

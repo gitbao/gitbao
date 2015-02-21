@@ -34,23 +34,36 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte(err.Error()))
 		return
 	}
-	model.DB.Create(&bao)
+	_ = model.DB.Create(&bao)
 
 	bao.Console = "Welcome to GitBao!!\n" +
-		"Getting ready to wrap up a tasty new Bao.\n"
+		"Getting ready to wrap up a tasty new Bao.\n" +
+		"Found some files:\n"
 
-	go func() {
-		err := builder.StartBuild(&bao)
-		if err != nil {
-			panic(err)
+	var isGo bool
+	for _, value := range bao.Files {
+		bao.Console += "    " + value.Filename + "\n"
+		if value.Language == "Go" {
+			isGo = true
 		}
-	}()
-
-	type Inventory struct {
-		Material string
-		Count    uint
 	}
-	tmpl, err := template.New("bdoy").Parse(siteBody)
+
+	if isGo != true {
+		bao.Console += "Whoops!\n" +
+			"GitBao only supports Go programs at the moment.\n" +
+			"Quitting...."
+		bao.IsComplete = true
+		model.DB.Save(&bao)
+	} else {
+		go func() {
+			err := builder.StartBuild(&bao)
+			if err != nil {
+				panic(err)
+			}
+		}()
+	}
+
+	tmpl, err := template.New("body").Parse(siteBody)
 	if err != nil {
 		// panic(err)
 	}
@@ -127,7 +140,7 @@ function writeToBody(text) {
 	$('pre').text(text)
 }
 
-longpoll("/poll/1/0/", writeToBody)
+longpoll("/poll/{{.Id}}/0/", writeToBody)
 </script>
 	</body>
 </html>

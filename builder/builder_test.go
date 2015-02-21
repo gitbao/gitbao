@@ -19,7 +19,7 @@ func init() {
 
 func TestDownloadFromRepo(t *testing.T) {
 
-	directory, err := DownloadFromRepo(bao)
+	directory, err := DownloadFromRepo(&bao)
 	if err != nil {
 		t.Error(err)
 	}
