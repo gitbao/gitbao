@@ -29,6 +29,9 @@ var github_access_key string
 
 func init() {
 	github_access_key = os.Getenv("GITHUB_GIST_ACCESS_KEY")
+	if github_access_key == "" {
+		panic("Github access key required")
+	}
 }
 
 func GetGistData(gistId, path string, useAlternate bool) (bao model.Bao, err error) {
@@ -43,10 +46,24 @@ func GetGistData(gistId, path string, useAlternate bool) (bao model.Bao, err err
 }
 
 func GetData(b model.Bao) (model.Bao, error) {
-	resp, err := http.Get("https://api.github.com/gists/" + b.GistId)
+	client := &http.Client{}
+	req, err := http.NewRequest(
+		"GET",
+		"https://api.github.com/gists/"+b.GistId,
+		nil,
+	)
 	if err != nil {
 		return b, err
 	}
+	req.SetBasicAuth(
+		github_access_key,
+		"",
+	)
+	resp, err := client.Do(req)
+	if err != nil {
+		return b, err
+	}
+
 	contents, err := ioutil.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
 		return b, fmt.Errorf("Error code %d: %s", resp.StatusCode, string(contents))
