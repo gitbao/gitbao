@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/sqs/mux"
+	"github.com/gorilla/mux"
 )
 
 func TestDownloadHandler(t *testing.T) {
@@ -23,9 +23,11 @@ func TestDownloadHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 	m.HandleFunc("/{username}/{gist-id}", DownloadHandler)
 	m.ServeHTTP(w, req)
-
 	if w.Code != 200 {
-		t.Error(fmt.Errorf("Wrong response status code"))
+		t.Error(fmt.Errorf(
+			"Wrong response status code: %s",
+			string(w.Body.Bytes()),
+		))
 	}
 }
 
@@ -35,7 +37,6 @@ func TestMain(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Printf("%#v", resp)
 	if resp.StatusCode != 200 {
 		t.Error(fmt.Errorf("Wrong response status code"))
 	}

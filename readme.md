@@ -1,6 +1,6 @@
 # Gitbao
 
-Wrapping up your github gists into delicious cloud-shaped buns. 
+Wrapping up your github gists into delicious cloud-shaped bao buns. 
 
 ## Spec
 
@@ -36,3 +36,14 @@ Wrapping up your github gists into delicious cloud-shaped buns.
  - Server is up for 24 hrs, more if you want it. Can log in to set up auto-updates, env variables, and other options. 
  - https://developer.github.com/v3/activity/events/types/#gistevent
  - https://developer.github.com/v3/auth/#via-oauth-tokens
+
+### Server Types
+
+**Router:**
+Sits on the wildcard subdomain `*.gitbao.com`. Routes all apps to their correct location.
+
+**Kitchen**
+Sits on `gitbao.com` & `gist.gitbao.com`. Handles creation of Bao's and serving of site pages. 
+
+**XiaoLong**
+Contain's Bao's. Can be triggered to create a new Bao, or provide logs/information for existing Bao's. 

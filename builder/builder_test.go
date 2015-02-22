@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -23,7 +22,7 @@ func TestDownloadFromRepo(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Printf("%s", directory)
+	// fmt.Printf("%s", directory)
 
 	err = os.RemoveAll(directory)
 	if err != nil {

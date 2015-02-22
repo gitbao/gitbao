@@ -1,16 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"text/template"
 	"time"
 
-	"github.com/gitbao/gitbao/builder"
 	"github.com/gitbao/gitbao/github"
 	"github.com/gitbao/gitbao/model"
-	"github.com/gitbao/gitbao/router"
-	"github.com/sqs/mux"
+	"github.com/gorilla/mux"
 )
 
 func main() {
@@ -20,9 +19,7 @@ func main() {
 	r.HandleFunc("/{username}/{gist-id}", DownloadHandler).Methods("GET")
 	r.HandleFunc("/poll/{id}/{line-count}/", PollHandler).Methods("GET")
 	http.Handle("/", r)
-	go http.ListenAndServe(":8000", nil)
-
-	http.ListenAndServe(":8001", &router.Router{})
+	http.ListenAndServe(":8000", nil)
 }
 
 func IndexHandler(w http.ResponseWriter, req *http.Request) {
@@ -31,6 +28,7 @@ func IndexHandler(w http.ResponseWriter, req *http.Request) {
 
 func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
+
 	gistId := vars["gist-id"]
 	username := vars["username"]
 
@@ -38,17 +36,18 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 
 	bao, err := github.GetGistData(gistId, path, false)
 	if err != nil {
+		fmt.Printf("%#v", bao)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		return
 	}
-	_ = model.DB.Create(&bao)
 
 	stringId := strconv.Itoa(int(bao.Id))
 	bao.Location = model.Location{
-		Destination: "localhost:8000",
-		Subdomain:   bao.GistId + "-" + stringId,
+		Subdomain: bao.GistId + "-" + stringId,
 	}
+
+	_ = model.DB.Create(&bao)
 
 	bao.Console = "Welcome to GitBao!!\n" +
 		"Getting ready to wrap up a tasty new Bao.\n" +
@@ -69,12 +68,7 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 		bao.IsComplete = true
 		model.DB.Save(&bao)
 	} else {
-		go func() {
-			err := builder.StartBuild(&bao)
-			if err != nil {
-				panic(err)
-			}
-		}()
+		// hit up the ziaolong
 	}
 
 	tmpl, err := template.New("body").Parse(siteBody)
