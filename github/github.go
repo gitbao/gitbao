@@ -34,18 +34,17 @@ func init() {
 	}
 }
 
-func GetGistData(gistId, path string, useAlternate bool) (bao model.Bao, err error) {
-	bao.GistId = gistId
+func GetGistData(bao *model.Bao, path string, useAlternate bool) (err error) {
 	if useAlternate != true {
-		bao, err = GetData(bao)
+		err = GetData(bao)
 	} else {
-		bao, err = GetDataAlternate(bao, path)
+		err = GetDataAlternate(bao, path)
 	}
 	// fmt.Printf("%#v", bao)
 	return
 }
 
-func GetData(b model.Bao) (model.Bao, error) {
+func GetData(b *model.Bao) error {
 	client := &http.Client{}
 	req, err := http.NewRequest(
 		"GET",
@@ -53,7 +52,7 @@ func GetData(b model.Bao) (model.Bao, error) {
 		nil,
 	)
 	if err != nil {
-		return b, err
+		return err
 	}
 	req.SetBasicAuth(
 		github_access_key,
@@ -61,20 +60,20 @@ func GetData(b model.Bao) (model.Bao, error) {
 	)
 	resp, err := client.Do(req)
 	if err != nil {
-		return b, err
+		return err
 	}
 
 	contents, err := ioutil.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
-		return b, fmt.Errorf("Error code %d: %s", resp.StatusCode, string(contents))
+		return fmt.Errorf("Error code %d: %s", resp.StatusCode, string(contents))
 	}
 	if err != nil {
-		return b, err
+		return err
 	}
 	var responseStruct githubApiGistResponse
 	err = json.Unmarshal(contents, &responseStruct)
 	if err != nil {
-		return b, err
+		return err
 	}
 	for key, value := range responseStruct.Files {
 		b.Files = append(b.Files, model.File{
@@ -85,50 +84,50 @@ func GetData(b model.Bao) (model.Bao, error) {
 
 	b.Url = responseStruct.Html_url
 	b.GitPullUrl = responseStruct.Git_pull_url
-	return b, nil
+	return nil
 }
 
-func GetDataAlternate(b model.Bao, path string) (model.Bao, error) {
+func GetDataAlternate(b *model.Bao, path string) error {
 	files := make(map[string]string)
 	gistUrl := "https://gist.github.com" + path
 	rawPath := "https://gist.githubusercontent.com" + path
 
 	resp, err := http.Get(gistUrl + ".json")
 	if err != nil {
-		return b, err
+		return err
 	}
 
 	contents, err := ioutil.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
-		return b, fmt.Errorf("%s", string(contents))
+		return fmt.Errorf("%s", string(contents))
 	}
 	if err != nil {
-		return b, err
+		return err
 	}
 	if resp.StatusCode == 404 {
 		err = fmt.Errorf("Gist not found")
-		return b, err
+		return err
 	}
 	var gistJson gistJson
 	err = json.Unmarshal(contents, &gistJson)
 	if err != nil {
-		return b, err
+		return err
 	}
 
 	for _, value := range gistJson.Files {
 		var resp *http.Response
 		resp, err = http.Get(rawPath + "/raw/" + value)
 		if err != nil {
-			return b, err
+			return err
 		}
 		var contents []byte
 		contents, err = ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return b, err
+			return err
 		}
 		files[value] = string(contents)
 	}
 	b.Url = gistUrl
 	b.GitPullUrl = "https://gist.github.com/" + b.GistId + ".git"
-	return b, nil
+	return nil
 }

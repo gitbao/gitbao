@@ -3,13 +3,18 @@ package github
 import (
 	"fmt"
 	"testing"
+
+	"github.com/gitbao/gitbao/model"
 )
 
 func TestGetGistData(t *testing.T) {
 	// /maxmcd/ba67234b79784c75cfd9
 	useAlternate := true
+	bao := model.Bao{
+		GistId: "ba67234b79784c75cfd9",
+	}
 	for {
-		bao, err := GetGistData("ba67234b79784c75cfd9", "/maxmcd/ba67234b79784c75cfd9", useAlternate)
+		err := GetGistData(&bao, "/maxmcd/ba67234b79784c75cfd9", useAlternate)
 		if err != nil {
 			t.Error(err)
 		}
