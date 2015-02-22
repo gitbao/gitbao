@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -16,14 +17,21 @@ func main() {
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 	r.HandleFunc("/", IndexHandler).Methods("GET")
-	r.HandleFunc("/{username}/{gist-id}", DownloadHandler).Methods("GET")
+	r.HandleFunc("/{username}/{gist-id}", DownloadHandler).Methods("GET").Host("{subdomain:gist}.{host:.*}")
 	r.HandleFunc("/poll/{id}/{line-count}/", PollHandler).Methods("GET")
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./public/")))
 	http.Handle("/", r)
 	http.ListenAndServe(":8000", nil)
 }
 
+var T = template.Must(template.ParseGlob("templates/*"))
+
+func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
+	T.ExecuteTemplate(w, tmpl+".html", data)
+}
+
 func IndexHandler(w http.ResponseWriter, req *http.Request) {
-	w.Write([]byte("index"))
+	RenderTemplate(w, "index", nil)
 }
 
 func DownloadHandler(w http.ResponseWriter, req *http.Request) {
@@ -34,7 +42,14 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 
 	path := "/" + username + "/" + gistId
 
-	bao, err := github.GetGistData(gistId, path, false)
+	bao := model.Bao{
+		GistId: gistId,
+		Console: "Welcome to gitbao!!\n" +
+			"Getting ready to wrap up a tasty new bao.\n",
+	}
+
+	// go func() {
+	err := github.GetGistData(&bao, path, false)
 	if err != nil {
 		fmt.Printf("%#v", bao)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -47,11 +62,7 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 		Subdomain: bao.GistId + "-" + stringId,
 	}
 
-	_ = model.DB.Create(&bao)
-
-	bao.Console = "Welcome to GitBao!!\n" +
-		"Getting ready to wrap up a tasty new Bao.\n" +
-		"Found some files:\n"
+	bao.Console += "Found some files:\n"
 
 	var isGo bool
 	for _, value := range bao.Files {
@@ -63,25 +74,30 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 
 	if isGo != true {
 		bao.Console += "Whoops!\n" +
-			"GitBao only supports Go programs at the moment.\n" +
+			"gitbao only supports Go programs at the moment.\n" +
 			"Quitting...."
 		bao.IsComplete = true
-		model.DB.Save(&bao)
 	} else {
 		// hit up the ziaolong
 	}
+	// }()
 
-	tmpl, err := template.New("body").Parse(siteBody)
-	if err != nil {
-		// panic(err)
+	// Remove this
+	bao.IsComplete = true
+
+	query := model.DB.Create(&bao)
+	if query.Error != nil {
+		fmt.Printf("%#v", bao)
+		panic(query.Error)
 	}
-	err = tmpl.Execute(w, bao)
-	if err != nil {
-		// panic(err)
-	}
+	RenderTemplate(w, "bao", bao)
 
-	// w.Write([]byte(siteBody))
+}
 
+type pollResponse struct {
+	Subdomain  string
+	Console    string
+	IsComplete bool
 }
 
 func PollHandler(w http.ResponseWriter, req *http.Request) {
@@ -97,64 +113,19 @@ func PollHandler(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	for {
-		var bao model.Bao
-		model.DB.Find(&bao, int64id)
-		if bao.IsComplete == true {
-			w.WriteHeader(http.StatusCreated)
-			w.Write([]byte(bao.Console))
-			return
-		} else {
-			w.Write([]byte(bao.Console))
-			return
-		}
-		time.Sleep(time.Second * 2)
+	var bao model.Bao
+	model.DB.Find(&bao, int64id)
+
+	response := pollResponse{
+		IsComplete: bao.IsComplete,
+		Console:    bao.Console,
 	}
+
+	responseJson, err := json.Marshal(response)
+	w.Write(responseJson)
+	return
 }
 
 func RouterHandler(w http.ResponseWriter, req *http.Request) {
 	w.Write([]byte("hello"))
 }
-
-const siteBody = `
-
-<html>
-	<head>
-		<script type="text/javascript" src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
-	</head>
-	<body>
-		<pre>{{.Console}}</pre>
-
-<script type="text/javascript">
-function longpoll(url, callback) {
-
-    var req = new XMLHttpRequest();
-    req.open('GET', url, true);
-
-    req.onreadystatechange = function(aEvt) {
-        if (req.readyState == 4) {
-            if (req.status == 200) {
-
-            	if (req.responseText != "done") {
-            		longpoll(url, callback);
-            	}
-            } else {
-                console.log("long-poll connection lost");
-            }
-            callback(req.responseText);
-
-        }
-    };
-
-    req.send(null);
-}
-function writeToBody(text) {
-	$('pre').text(text)
-}
-
-longpoll("/poll/{{.Id}}/0/", writeToBody)
-</script>
-	</body>
-</html>
-
-`
