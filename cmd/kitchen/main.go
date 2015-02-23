@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"text/template"
 	"time"
@@ -13,7 +14,13 @@ import (
 	"github.com/gorilla/mux"
 )
 
+var T *template.Template
+
 func main() {
+
+	goPath := os.Getenv("GOPATH")
+	T = template.Must(template.ParseGlob(goPath + "src/github.com/gitbao/gitbao/cmd/kitchen/templates/*"))
+
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 	r.HandleFunc("/", IndexHandler).Methods("GET")
@@ -24,10 +31,9 @@ func main() {
 	http.ListenAndServe(":8000", nil)
 }
 
-var T = template.Must(template.ParseGlob("templates/*"))
-
 func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 	T.ExecuteTemplate(w, tmpl+".html", data)
+
 }
 
 func IndexHandler(w http.ResponseWriter, req *http.Request) {
