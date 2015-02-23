@@ -1,6 +1,9 @@
 package model
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/jinzhu/gorm"
 	_ "github.com/lib/pq"
 )
@@ -47,19 +50,63 @@ type File struct {
 	RawUrl   string
 }
 
-func init() {
+type Server struct {
+	Id         int64
+	Ip         string
+	InstanceId string
+	Kind       string
+	Dockers    []Docker
+}
 
+type Docker struct {
+	Id int64
+}
+
+func init() {
+	Connect()
+}
+func Connect() {
 	var err error
-	DB, err = gorm.Open("postgres", "dbname=gitbaotest sslmode=disable")
+
+	environment := os.Getenv("GO_ENV")
+	if environment == "production" {
+		port := "5432"
+		host := os.Getenv("GITBAO_DBHOST")
+		dbname := os.Getenv("GITBAO_DBNAME")
+		username := os.Getenv("GITBAO_DBUSERNAME")
+		password := os.Getenv("GITBAO_DBPASSWORD")
+		configString := "host=" + host + " port=" + port + " user=" + username + " password=" + password + " sslmode=disable dbname=" + dbname
+		fmt.Println(configString)
+		DB, err = gorm.Open("postgres", configString)
+	} else {
+		DB, err = gorm.Open("postgres", "dbname=gitbaotest sslmode=disable")
+	}
 	if err != nil {
 		panic(err)
 	}
 
-	DB.DropTableIfExists(&Config{})
-	DB.DropTableIfExists(&EnvVar{})
-	DB.DropTableIfExists(&Location{})
-	DB.DropTableIfExists(&Bao{})
-	DB.DropTableIfExists(&File{})
+	tables := []interface{}{
+		&Config{},
+		&EnvVar{},
+		&Location{},
+		&Bao{},
+		&File{},
+		&Server{},
+		&Docker{},
+	}
 
-	DB.AutoMigrate(&Location{}, &Bao{}, &File{}, &EnvVar{}, &Config{})
+	if environment != "production" {
+		for _, value := range tables {
+			DB.DropTableIfExists(value)
+		}
+	}
+
+	DB.AutoMigrate(tables...)
+}
+
+func Close() {
+	err := DB.DB().Close()
+	if err != nil {
+		panic(err)
+	}
 }
