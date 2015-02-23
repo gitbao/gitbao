@@ -91,8 +91,6 @@ func Connect() {
 		&Location{},
 		&Bao{},
 		&File{},
-		&Server{},
-		&Docker{},
 	}
 
 	if environment != "production" {
@@ -102,6 +100,7 @@ func Connect() {
 	}
 
 	DB.AutoMigrate(tables...)
+	DB.AutoMigrate(&Server{}, &Docker{})
 }
 
 func Close() {
