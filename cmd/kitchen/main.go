@@ -70,6 +70,9 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 		if value.Language == "Go" {
 			isGo = true
 		}
+		if value.Filename == "Baofile" || value.Filename == "baofile" {
+			bao.BaoFileUrl = value.RawUrl
+		}
 	}
 
 	if isGo != true {

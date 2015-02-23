@@ -33,7 +33,7 @@ func TestDownloadHandler(t *testing.T) {
 
 func TestMain(t *testing.T) {
 	go main()
-	resp, err := http.Get("http://localhost:8000/maxmcd/ba67234b79784c75cfd9")
+	resp, err := http.Get("http://gist.localhost:8000/maxmcd/ba67234b79784c75cfd9")
 	if err != nil {
 		t.Error(err)
 	}

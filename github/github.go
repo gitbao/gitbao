@@ -79,6 +79,7 @@ func GetData(b *model.Bao) error {
 		b.Files = append(b.Files, model.File{
 			Filename: key,
 			Language: value.Language,
+			RawUrl:   value.Raw_url,
 		})
 	}
 
