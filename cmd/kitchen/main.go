@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -27,8 +28,15 @@ func main() {
 	r.HandleFunc("/{username}/{gist-id}", DownloadHandler).Methods("GET").Host("{subdomain:gist}.{host:.*}")
 	r.HandleFunc("/poll/{id}/{line-count}/", PollHandler).Methods("GET")
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./public/")))
-	http.Handle("/", r)
+	http.Handle("/", Middleware(r))
 	http.ListenAndServe(":8000", nil)
+}
+
+func Middleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println(r.Host, r.URL)
+		h.ServeHTTP(w, r)
+	})
 }
 
 func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
@@ -45,6 +53,8 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 
 	gistId := vars["gist-id"]
 	username := vars["username"]
+
+	log.Println("New bao", gistId, username)
 
 	path := "/" + username + "/" + gistId
 
