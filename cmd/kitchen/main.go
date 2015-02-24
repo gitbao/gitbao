@@ -27,8 +27,9 @@ func main() {
 	r.HandleFunc("/", IndexHandler).Methods("GET")
 	r.HandleFunc("/{username}/{gist-id}", DownloadHandler).Methods("GET").Host("{subdomain:gist}.{host:.*}")
 	r.HandleFunc("/poll/{id}/{line-count}/", PollHandler).Methods("GET")
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./public/")))
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir(goPath + "src/github.com/gitbao/gitbao/cmd/kitchen/public/")))
 	http.Handle("/", Middleware(r))
+	fmt.Println("Broadcasting Kitchen on port 8000")
 	http.ListenAndServe(":8000", nil)
 }
 
@@ -97,18 +98,34 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 			"Quitting...."
 		bao.IsComplete = true
 	} else {
-		// hit up the ziaolong
 	}
 	// }()
-
-	// Remove this
-	bao.IsComplete = true
 
 	query := model.DB.Create(&bao)
 	if query.Error != nil {
 		fmt.Printf("%#v", bao)
 		panic(query.Error)
 	}
+	go func() {
+		var server model.Server
+		query := model.DB.Where("kind = ?", "xiaolong").Find(&server)
+		if query.Error != nil {
+			bao.Console += "Uh oh, we've experienced an error. Please try again.\n"
+			fmt.Println(query.Error)
+			model.DB.Save(&bao)
+			return
+		}
+		getUrl := fmt.Sprintf("http://%s:8002/build/%d", server.Ip, bao.Id)
+		log.Println(getUrl)
+		resp, err := http.Get(getUrl)
+		log.Printf("%#v", resp)
+		if err != nil || resp.StatusCode != 200 {
+			bao.Console += "Uh oh, we've experienced an error. Please try again.\n"
+			bao.IsComplete = true
+			model.DB.Save(&bao)
+			return
+		}
+	}()
 	RenderTemplate(w, "bao", bao)
 
 }

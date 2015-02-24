@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/gitbao/gitbao/builder"
@@ -9,13 +12,34 @@ import (
 	"github.com/gorilla/mux"
 )
 
+var server model.Server
+
 func main() {
+	myId := os.Getenv("SERVER_ID")
+	myIdInt, err := strconv.Atoi(myId)
+	if err != nil {
+		panic(err)
+	}
+
+	query := model.DB.Find(&server, myIdInt)
+	if query.Error != nil {
+		panic(query.Error)
+	}
+
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 	r.HandleFunc("/build/{bao-id}", BuildHandler).Methods("GET")
 	r.HandleFunc("/logs/{bao-id}", LogHandler).Methods("GET")
-	http.Handle("/", r)
+	http.Handle("/", Middleware(r))
+	fmt.Println("Broadcasting Xiaolong on port 8002")
 	http.ListenAndServe(":8002", nil)
+}
+
+func Middleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println(r.Host, r.URL)
+		h.ServeHTTP(w, r)
+	})
 }
 
 func BuildHandler(w http.ResponseWriter, req *http.Request) {
@@ -23,6 +47,7 @@ func BuildHandler(w http.ResponseWriter, req *http.Request) {
 	baoIdString := vars["bao-id"]
 	baoId, err := strconv.Atoi(baoIdString)
 	if baoIdString == "" || err != nil {
+		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Error parsing bao id"))
 		return
@@ -30,10 +55,14 @@ func BuildHandler(w http.ResponseWriter, req *http.Request) {
 	var bao model.Bao
 	model.DB.Find(&bao, int64(baoId))
 
-	bao.Location.Destination = "localhost:8000"
-
+	if bao.IsComplete == true {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Bao is already complete"))
+		return
+	}
 	go func() {
-		err := builder.StartBuild(&bao)
+		err := builder.StartBuild(&bao, server)
 		if err != nil {
 			panic(err)
 		}

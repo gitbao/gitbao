@@ -10,7 +10,13 @@ import (
 	"github.com/gitbao/gitbao/model"
 )
 
-func StartBuild(b *model.Bao) error {
+func StartBuild(b *model.Bao, server model.Server) error {
+	var docker model.Docker
+	docker.ServerId = server.Id
+	defer func() {
+		model.DB.Create(&docker)
+	}()
+
 	writeToBao(b, "Cloning gist files")
 	directory, err := DownloadFromRepo(b)
 	if err != nil {
@@ -25,11 +31,11 @@ func StartBuild(b *model.Bao) error {
 		writeToBao(b, "Error creating dockerfile")
 		return err
 	}
-	err = BuildDockerfile(b, directory)
+	dockerId, err := BuildDockerfile(b, directory)
 	if err != nil {
 		writeToBao(b, err.Error()+"\nquitting...")
 	}
-
+	docker.DockerId = dockerId
 	b.IsComplete = true
 	model.DB.Save(b)
 
@@ -58,17 +64,19 @@ func CreateDockerfile(path string) error {
 	return err
 }
 
-func BuildDockerfile(b *model.Bao, path string) error {
+func BuildDockerfile(b *model.Bao, path string) (
+	dockerId string, err error) {
 	cmd := exec.Command("sudo", "docker", "build", "-t", "outyet", path)
 	var stdobuild bytes.Buffer
 	// var stdebuild bytes.Buffer
 	cmd.Stdout = &stdobuild
 	cmd.Stderr = &stdobuild
-	err := cmd.Run()
+	err = cmd.Run()
 
 	buildError := stdobuild.Bytes()
 	if err != nil {
-		return fmt.Errorf("Error building application: \n%s", string(buildError))
+		err = fmt.Errorf("Error building application: \n%s", string(buildError))
+		return
 	}
 
 	writeToBao(b, "Application built successfully\nStarting application:")
@@ -80,17 +88,17 @@ func BuildDockerfile(b *model.Bao, path string) error {
 		"--detach",
 		"outyet",
 	)
-	// var stdorun bytes.Buffer
-	// var stderun bytes.Buffer
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Run()
+	output, err := cmd.CombinedOutput()
+	dockerId = string(output)
+	fmt.Println(dockerId)
+
 	if err != nil {
-		return fmt.Errorf("Error running application\n")
+		err = fmt.Errorf("Error running application: %s\n", err)
+		return
 	}
 
 	// writeToBao(b, string(stderun.Bytes()))
-	return nil
+	return
 }
 
 func runCommand(b *model.Bao, command string, args ...string) error {
