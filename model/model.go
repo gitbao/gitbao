@@ -1,8 +1,8 @@
 package model
 
 import (
-	"fmt"
 	"os"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/lib/pq"
@@ -11,15 +11,19 @@ import (
 var DB gorm.DB
 
 type Config struct {
-	BaoId   int64
-	Port    int64
-	EnvVars []EnvVar
+	BaoId     int64
+	Port      int64
+	EnvVars   []EnvVar
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type EnvVar struct {
-	ConfigId int64
-	Key      string
-	Value    string
+	ConfigId  int64
+	Key       string
+	Value     string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type Location struct {
@@ -27,6 +31,8 @@ type Location struct {
 	BaoId       int64
 	Subdomain   string
 	Destination string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type Bao struct {
@@ -40,14 +46,18 @@ type Bao struct {
 	Location   Location
 	Files      []File
 	Config     Config
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 type File struct {
-	Id       int64
-	BaoId    int64
-	Filename string
-	Language string
-	RawUrl   string
+	Id        int64
+	BaoId     int64
+	Filename  string
+	Language  string
+	RawUrl    string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type Server struct {
@@ -56,10 +66,18 @@ type Server struct {
 	InstanceId string
 	Kind       string
 	Dockers    []Docker
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	DeletedAt  time.Time
 }
 
 type Docker struct {
-	Id int64
+	Id        int64
+	ServerId  int64
+	DockerId  string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt time.Time
 }
 
 func init() {
@@ -76,7 +94,6 @@ func Connect() {
 		username := os.Getenv("GITBAO_DBUSERNAME")
 		password := os.Getenv("GITBAO_DBPASSWORD")
 		configString := "host=" + host + " port=" + port + " user=" + username + " password=" + password + " sslmode=disable dbname=" + dbname
-		fmt.Println(configString)
 		DB, err = gorm.Open("postgres", configString)
 	} else {
 		DB, err = gorm.Open("postgres", "dbname=gitbaotest sslmode=disable")
