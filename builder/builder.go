@@ -17,6 +17,12 @@ func StartBuild(b *model.Bao, server model.Server) error {
 		model.DB.Create(&docker)
 	}()
 
+	err := configDocker(&docker)
+	if err != nil {
+		writeToBao(b, "Error configuring Docker: "+err.Error())
+		return nil
+	}
+
 	writeToBao(b, "Cloning gist files")
 	directory, err := DownloadFromRepo(b)
 	if err != nil {
@@ -31,11 +37,26 @@ func StartBuild(b *model.Bao, server model.Server) error {
 		writeToBao(b, "Error creating dockerfile")
 		return err
 	}
-	dockerId, err := BuildDockerfile(b, directory)
+	writeToBao(b, "Building dockerfile (this could take a while)")
+	dockerId, err := BuildDockerfile(b, directory, docker)
 	if err != nil {
 		writeToBao(b, err.Error()+"\nquitting...")
 	}
+
 	docker.DockerId = dockerId
+	docker.BaoId = b.Id
+
+	var location model.Location
+	location.BaoId = b.Id
+	location.Subdomain = fmt.Sprintf("%s-%d", b.GistId, b.Id)
+	location.Destination = fmt.Sprintf("%s:%d", server.Ip, docker.Port)
+	query := model.DB.Create(&location)
+	if query.Error != nil {
+		writeToBao(b, query.Error.Error())
+	}
+
+	writeToBao(b, "Site hosted on: "+location.Subdomain+".gitbao.com")
+
 	b.IsComplete = true
 	model.DB.Save(b)
 
@@ -64,7 +85,7 @@ func CreateDockerfile(path string) error {
 	return err
 }
 
-func BuildDockerfile(b *model.Bao, path string) (
+func BuildDockerfile(b *model.Bao, path string, docker model.Docker) (
 	dockerId string, err error) {
 	cmd := exec.Command("sudo", "docker", "build", "-t", "outyet", path)
 	var stdobuild bytes.Buffer
@@ -83,7 +104,7 @@ func BuildDockerfile(b *model.Bao, path string) (
 
 	// writeToBao(b, string(stdobuild.Bytes()))
 	cmd = exec.Command("sudo", "docker", "run",
-		"--publish", "6060:8080",
+		"--publish", fmt.Sprintf("%d:8080", docker.Port),
 		"--name", path,
 		"--detach",
 		"outyet",
@@ -143,6 +164,21 @@ func runCommand(b *model.Bao, command string, args ...string) error {
 func writeToBao(b *model.Bao, text string) error {
 	b.Console = b.Console + text + "\n"
 	model.DB.Save(b)
+	return nil
+}
+
+func configDocker(d *model.Docker) error {
+	var lastDocker model.Docker
+	query := model.DB.Order("port desc").Not("port = ?", 0).Where("server_id = ?", 5).First(&lastDocker)
+	if query.Error != nil {
+		return query.Error
+	}
+	if lastDocker.Port < 9000 {
+		d.Port = 9000
+	} else {
+		d.Port = lastDocker.Port + 1
+	}
+	fmt.Printf("%d %d", lastDocker.Port, d.Port)
 	return nil
 }
 

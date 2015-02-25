@@ -74,7 +74,9 @@ type Server struct {
 type Docker struct {
 	Id        int64
 	ServerId  int64
+	BaoId     int64
 	DockerId  string
+	Port      int64
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	DeletedAt time.Time
