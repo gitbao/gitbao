@@ -16,11 +16,13 @@ import (
 )
 
 var T *template.Template
+var goPath string
 
+func init() {
+	goPath = os.Getenv("GOPATH")
+	T = template.Must(template.ParseGlob(goPath + "/src/github.com/gitbao/gitbao/cmd/kitchen/templates/*"))
+}
 func main() {
-
-	goPath := os.Getenv("GOPATH")
-	T = template.Must(template.ParseGlob(goPath + "src/github.com/gitbao/gitbao/cmd/kitchen/templates/*"))
 
 	r := mux.NewRouter()
 	r.StrictSlash(true)
@@ -42,7 +44,6 @@ func Middleware(h http.Handler) http.Handler {
 
 func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 	T.ExecuteTemplate(w, tmpl+".html", data)
-
 }
 
 func IndexHandler(w http.ResponseWriter, req *http.Request) {

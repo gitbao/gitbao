@@ -2,8 +2,6 @@ package router
 
 import (
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/gitbao/gitbao/model"
@@ -26,28 +24,6 @@ func init() {
 		if query.Error != nil {
 			panic(query.Error)
 		}
-	}
-}
-
-func TestDownloadHandler(t *testing.T) {
-	go http.ListenAndServe(":8000", nil)
-	req, err := http.NewRequest(
-		"GET",
-		"https://localh.gitbao.com/",
-		nil,
-	)
-	if err != nil {
-		t.Error(err)
-	}
-
-	w := httptest.NewRecorder()
-	r := &Router{}
-	r.ServeHTTP(w, req)
-	if w.Code != 200 {
-		t.Error(fmt.Errorf("Wrong status code"))
-	}
-	if string(w.Body.Bytes()) != "404 page not found\n" {
-		t.Error(fmt.Errorf("Wrong response body"))
 	}
 }
 
