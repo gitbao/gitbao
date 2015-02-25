@@ -13,9 +13,6 @@ import (
 func StartBuild(b *model.Bao, server model.Server) error {
 	var docker model.Docker
 	docker.ServerId = server.Id
-	defer func() {
-		model.DB.Create(&docker)
-	}()
 
 	err := configDocker(&docker)
 	if err != nil {
@@ -46,19 +43,14 @@ func StartBuild(b *model.Bao, server model.Server) error {
 	docker.DockerId = dockerId
 	docker.BaoId = b.Id
 
-	var location model.Location
-	location.BaoId = b.Id
-	location.Subdomain = fmt.Sprintf("%s-%d", b.GistId, b.Id)
-	location.Destination = fmt.Sprintf("%s:%d", server.Ip, docker.Port)
-	query := model.DB.Create(&location)
-	if query.Error != nil {
-		writeToBao(b, query.Error.Error())
-	}
+	b.Location.BaoId = b.Id
+	b.Location.Subdomain = fmt.Sprintf("%s-%d", b.GistId, b.Id)
+	b.Location.Destination = fmt.Sprintf("%s:%d", server.Ip, docker.Port)
 
-	writeToBao(b, "Site hosted on: "+location.Subdomain+".gitbao.com")
-
+	writeToBao(b, "Site hosted on: "+b.Location.Subdomain+".gitbao.com")
 	b.IsComplete = true
 	model.DB.Save(b)
+	model.DB.Create(&docker)
 
 	err = os.RemoveAll(directory)
 
@@ -109,7 +101,7 @@ func BuildDockerfile(b *model.Bao, path string, docker model.Docker) (
 		"--detach",
 		"outyet",
 	)
-	output, err := cmd.CombinedOutput()
+	output, err := cmd.Output()
 	dockerId = string(output)
 	fmt.Println(dockerId)
 
