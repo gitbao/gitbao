@@ -7,12 +7,14 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"text/template"
 	"time"
 
 	"github.com/gitbao/gitbao/github"
 	"github.com/gitbao/gitbao/model"
 	"github.com/gorilla/mux"
+	"github.com/jinzhu/gorm"
 )
 
 var T *template.Template
@@ -27,8 +29,10 @@ func main() {
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 	r.HandleFunc("/", IndexHandler).Methods("GET")
-	r.HandleFunc("/{username}/{gist-id}", DownloadHandler).Methods("GET").Host("{subdomain:gist}.{host:.*}")
-	r.HandleFunc("/poll/{id}/{line-count}/", PollHandler).Methods("GET")
+	r.HandleFunc("/{username}/{gist-id}", CreateHandler).Methods("GET").Host("{subdomain:gist}.{host:.*}")
+	r.HandleFunc("/bao/{id-base36}/", BaoHandler).Methods("GET")
+	r.HandleFunc("/poll/{id}/", PollHandler).Methods("GET")
+	r.HandleFunc("/deploy/{id}/", DeployHandler).Methods("POST")
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir(goPath + "src/github.com/gitbao/gitbao/cmd/kitchen/public/")))
 	http.Handle("/", Middleware(r))
 	fmt.Println("Broadcasting Kitchen on port 8000")
@@ -50,24 +54,67 @@ func IndexHandler(w http.ResponseWriter, req *http.Request) {
 	RenderTemplate(w, "index", nil)
 }
 
-func DownloadHandler(w http.ResponseWriter, req *http.Request) {
+func CreateHandler(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
 	gistId := vars["gist-id"]
 	username := vars["username"]
+	log.Printf("New bao: %s %s\n", gistId, username)
 
-	log.Println("New bao", gistId, username)
-
-	path := "/" + username + "/" + gistId
+	if gistId == "" || username == "" {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("404"))
+		return
+	}
 
 	bao := model.Bao{
 		GistId: gistId,
-		Console: "Welcome to gitbao!!\n" +
-			"Getting ready to wrap up a tasty new bao.\n",
+	}
+
+	query := model.DB.Create(&bao)
+	if query.Error != nil {
+		log.Println("Error:", query.Error)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(query.Error.Error()))
+		return
+	}
+
+	host := req.Host
+	host_parts := strings.Split(host, ".")
+
+	base36Id := strconv.FormatInt(bao.Id, 36)
+
+	http.Redirect(
+		w, req,
+		fmt.Sprintf(
+			"http://%s/bao/%s/",
+			strings.Join(host_parts[1:], ""),
+			base36Id,
+		),
+		302,
+	)
+}
+
+func BaoHandler(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	base36Id := vars["id-base36"]
+	fmt.Println(base36Id)
+	baoId, err := strconv.ParseInt(base36Id, 36, 64)
+
+	var bao model.Bao
+	query := model.DB.Find(&bao, baoId)
+	if query.Error == gorm.RecordNotFound {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("404"))
+		return
+	} else if query.Error != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	// go func() {
-	err := github.GetGistData(&bao, path, false)
+	err = github.GetGistData(&bao)
 	if err != nil {
 		fmt.Printf("%#v", bao)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -75,10 +122,8 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	stringId := strconv.Itoa(int(bao.Id))
-	bao.Location = model.Location{
-		Subdomain: bao.GistId + "-" + stringId,
-	}
+	bao.Console = "Welcome to gitbao!!\n" +
+		"Getting ready to wrap up a tasty new bao.\n"
 
 	bao.Console += "Found some files:\n"
 
@@ -99,17 +144,13 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 			"Quitting...."
 		bao.IsComplete = true
 	} else {
+		bao.Console += "Nice, looks like we can deploy your application\n" +
+			"Modify your config file if needed and hit deploy!\n"
 	}
-	// }()
 
-	query := model.DB.Create(&bao)
-	if query.Error != nil {
-		fmt.Printf("%#v", bao)
-		panic(query.Error)
-	}
 	go func() {
 		var server model.Server
-		query := model.DB.Where("kind = ?", "xiaolong").Find(&server)
+		query = model.DB.Where("kind = ?", "xiaolong").Find(&server)
 		if query.Error != nil {
 			bao.Console += "Uh oh, we've experienced an error. Please try again.\n"
 			fmt.Println(query.Error)
@@ -127,6 +168,12 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}()
+
+	query = model.DB.Save(&bao)
+	if query.Error != nil {
+		fmt.Printf("%#v", bao)
+		panic(query.Error)
+	}
 	RenderTemplate(w, "bao", bao)
 
 }
@@ -134,7 +181,33 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 type pollResponse struct {
 	Subdomain  string
 	Console    string
+	IsReady    bool
 	IsComplete bool
+}
+
+func DeployHandler(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	id := vars["id"]
+	intid, err := strconv.Atoi(id)
+	int64id := int64(intid)
+
+	if err != nil || id == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var bao model.Bao
+	query := model.DB.Find(&bao, int64id)
+	if query.Error == gorm.RecordNotFound {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("404"))
+		return
+	} else if query.Error != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 }
 
 func PollHandler(w http.ResponseWriter, req *http.Request) {
@@ -156,6 +229,7 @@ func PollHandler(w http.ResponseWriter, req *http.Request) {
 	response := pollResponse{
 		IsComplete: bao.IsComplete,
 		Console:    bao.Console,
+		IsReady:    true,
 	}
 
 	responseJson, err := json.Marshal(response)

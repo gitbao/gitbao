@@ -8,6 +8,7 @@ import (
 	"os/exec"
 
 	"github.com/gitbao/gitbao/model"
+	"github.com/jinzhu/gorm"
 )
 
 func StartBuild(b *model.Bao, server model.Server) error {
@@ -16,28 +17,29 @@ func StartBuild(b *model.Bao, server model.Server) error {
 
 	err := configDocker(&docker)
 	if err != nil {
-		writeToBao(b, "Error configuring Docker: "+err.Error())
+		writeToBao(b, "Error configuring Docker: "+err.Error(), true)
 		return nil
 	}
 
-	writeToBao(b, "Cloning gist files")
+	writeToBao(b, "Cloning gist files", false)
 	directory, err := DownloadFromRepo(b)
 	if err != nil {
-		writeToBao(b, "Error cloning files")
+		writeToBao(b, "Error cloning files", true)
 		return err
 	} else {
-		writeToBao(b, "Files cloned successfully")
+		writeToBao(b, "Files cloned successfully", false)
 	}
-	writeToBao(b, "Creating dockerfile")
+	writeToBao(b, "Creating dockerfile", false)
 	err = CreateDockerfile(directory)
 	if err != nil {
-		writeToBao(b, "Error creating dockerfile")
+		writeToBao(b, "Error creating dockerfile", true)
 		return err
 	}
-	writeToBao(b, "Building dockerfile (this could take a while)")
+	writeToBao(b, "Building dockerfile (this could take a while)", false)
 	dockerId, err := BuildDockerfile(b, directory, docker)
 	if err != nil {
-		writeToBao(b, err.Error()+"\nquitting...")
+		writeToBao(b, err.Error()+"\nquitting...", true)
+		return err
 	}
 
 	docker.DockerId = dockerId
@@ -47,8 +49,7 @@ func StartBuild(b *model.Bao, server model.Server) error {
 	b.Location.Subdomain = fmt.Sprintf("%s-%d", b.GistId, b.Id)
 	b.Location.Destination = fmt.Sprintf("%s:%d", server.Ip, docker.Port)
 
-	writeToBao(b, "Site hosted on: "+b.Location.Subdomain+".gitbao.com")
-	b.IsComplete = true
+	writeToBao(b, "Site hosted on: "+b.Location.Subdomain+".gitbao.com", true)
 	model.DB.Save(b)
 	model.DB.Create(&docker)
 
@@ -72,7 +73,7 @@ func DownloadFromRepo(b *model.Bao) (directory string, err error) {
 }
 
 func CreateDockerfile(path string) error {
-	contents := `FROM golang
+	contents := `FROM golang:1.4.2
 
 RUN mkdir -p /go/src/app
 WORKDIR /go/src/app
@@ -104,7 +105,7 @@ func BuildDockerfile(b *model.Bao, path string, docker model.Docker) (
 		return
 	}
 
-	writeToBao(b, "Application built successfully\nStarting application:")
+	writeToBao(b, "Application built successfully\nStarting application:", false)
 
 	// writeToBao(b, string(stdobuild.Bytes()))
 	cmd = exec.Command("sudo", "docker", "run",
@@ -165,7 +166,8 @@ func runCommand(b *model.Bao, command string, args ...string) error {
 	return nil
 }
 
-func writeToBao(b *model.Bao, text string) error {
+func writeToBao(b *model.Bao, text string, isComplete bool) error {
+	b.IsComplete = isComplete
 	b.Console = b.Console + text + "\n"
 	model.DB.Save(b)
 	return nil
@@ -174,7 +176,7 @@ func writeToBao(b *model.Bao, text string) error {
 func configDocker(d *model.Docker) error {
 	var lastDocker model.Docker
 	query := model.DB.Order("port desc").Not("port = ?", 0).Where("server_id = ?", 5).First(&lastDocker)
-	if query.Error != nil {
+	if query.Error != nil && query.Error != gorm.RecordNotFound {
 		return query.Error
 	}
 	if lastDocker.Port < 9000 {

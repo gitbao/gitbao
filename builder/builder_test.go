@@ -33,7 +33,7 @@ func TestDownloadFromRepo(t *testing.T) {
 func TestWriteToBao(t *testing.T) {
 	testText := "This is some text"
 	model.DB.Create(&bao)
-	writeToBao(&bao, testText)
+	writeToBao(&bao, testText, false)
 	if bao.Console != testText+"\n" {
 		t.Errorf("Not writing to bao correctly")
 	}

@@ -34,12 +34,12 @@ func init() {
 	}
 }
 
-func GetGistData(bao *model.Bao, path string, useAlternate bool) (err error) {
-	if useAlternate != true {
-		err = GetData(bao)
-	} else {
-		err = GetDataAlternate(bao, path)
-	}
+func GetGistData(bao *model.Bao) (err error) {
+	// if useAlternate != true {
+	err = GetData(bao)
+	// } else {
+	// err = GetDataAlternate(bao, path)
+	// }
 	// fmt.Printf("%#v", bao)
 	return
 }

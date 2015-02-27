@@ -82,14 +82,17 @@ type Docker struct {
 	DeletedAt time.Time
 }
 
+var Env string
+
 func init() {
 	Connect()
 }
+
 func Connect() {
 	var err error
 
-	environment := os.Getenv("GO_ENV")
-	if environment == "production" {
+	Env = os.Getenv("GO_ENV")
+	if Env == "production" {
 		port := "5432"
 		host := os.Getenv("GITBAO_DBHOST")
 		dbname := os.Getenv("GITBAO_DBNAME")
@@ -110,16 +113,29 @@ func Connect() {
 		&Location{},
 		&Bao{},
 		&File{},
+		&Server{},
+		&Docker{},
 	}
 
-	if environment != "production" {
+	if Env != "production" {
 		for _, value := range tables {
 			DB.DropTableIfExists(value)
 		}
 	}
 
 	DB.AutoMigrate(tables...)
-	DB.AutoMigrate(&Server{}, &Docker{})
+
+	if Env != "production" {
+		Seed()
+	}
+}
+
+func Seed() {
+	server := Server{
+		Kind: "xiaolong",
+		Ip:   "localhost",
+	}
+	DB.Create(&server)
 }
 
 func Close() {

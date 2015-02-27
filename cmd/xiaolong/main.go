@@ -15,15 +15,22 @@ import (
 var server model.Server
 
 func main() {
-	myId := os.Getenv("SERVER_ID")
-	myIdInt, err := strconv.Atoi(myId)
-	if err != nil {
-		panic(err)
-	}
+	if model.Env == "production" {
+		myId := os.Getenv("SERVER_ID")
+		myIdInt, err := strconv.Atoi(myId)
+		if err != nil {
+			panic(err)
+		}
 
-	query := model.DB.Find(&server, myIdInt)
-	if query.Error != nil {
-		panic(query.Error)
+		query := model.DB.Find(&server, myIdInt)
+		if query.Error != nil {
+			panic(query.Error)
+		}
+	} else {
+		query := model.DB.First(&server)
+		if query.Error != nil {
+			panic(query.Error)
+		}
 	}
 
 	r := mux.NewRouter()
