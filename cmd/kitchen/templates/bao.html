@@ -11,7 +11,7 @@
 
                     </div>
                     <div class="columns six">
-                        <a href="/deploy/{{.Id}}/" class="button ajax deploy button-primary" disabled>deploy</a>
+                        <button href="/deploy/{{.Id}}/" class="button ajax deploy button-primary" disabled>deploy</button>
 
                         <textarea class="config">
                             # This is your bao config file, define 
@@ -26,6 +26,9 @@
         </div>        
     </div>
     <script type="text/javascript">
-        longpoll("/poll/{{.Id}}/", writeToBody)
+        poll = function() {
+            longpoll("/poll/{{.Id}}/", writeToBody)
+        }
+        poll()
     </script>
 {{template "footer"}}

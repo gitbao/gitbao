@@ -41,6 +41,8 @@ type Bao struct {
 	Url        string `sql:"type:text;"`
 	Console    string `sql:"type:text;"`
 	IsComplete bool
+	IsReady    bool
+	ServerId   int64
 	GitPullUrl string `sql:"type:text;"`
 	BaoFileUrl string `sql:"type:text;"`
 	Location   Location

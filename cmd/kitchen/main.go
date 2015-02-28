@@ -113,61 +113,68 @@ func BaoHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// go func() {
-	err = github.GetGistData(&bao)
-	if err != nil {
-		fmt.Printf("%#v", bao)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
-	}
+	if bao.GitPullUrl == "" {
 
-	bao.Console = "Welcome to gitbao!!\n" +
-		"Getting ready to wrap up a tasty new bao.\n"
-
-	bao.Console += "Found some files:\n"
-
-	var isGo bool
-	for _, value := range bao.Files {
-		bao.Console += "    " + value.Filename + "\n"
-		if value.Language == "Go" {
-			isGo = true
-		}
-		if value.Filename == "Baofile" || value.Filename == "baofile" {
-			bao.BaoFileUrl = value.RawUrl
-		}
-	}
-
-	if isGo != true {
-		bao.Console += "Whoops!\n" +
-			"gitbao only supports Go programs at the moment.\n" +
-			"Quitting...."
-		bao.IsComplete = true
-	} else {
-		bao.Console += "Nice, looks like we can deploy your application\n" +
-			"Modify your config file if needed and hit deploy!\n"
-	}
-
-	go func() {
-		var server model.Server
-		query = model.DB.Where("kind = ?", "xiaolong").Find(&server)
-		if query.Error != nil {
-			bao.Console += "Uh oh, we've experienced an error. Please try again.\n"
-			fmt.Println(query.Error)
-			model.DB.Save(&bao)
+		// go func() {
+		err = github.GetGistData(&bao)
+		if err != nil {
+			fmt.Printf("%#v", bao)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
 			return
 		}
-		getUrl := fmt.Sprintf("http://%s:8002/build/%d", server.Ip, bao.Id)
-		log.Println(getUrl)
-		resp, err := http.Get(getUrl)
-		log.Printf("%#v", resp)
-		if err != nil || resp.StatusCode != 200 {
-			bao.Console += "Uh oh, we've experienced an error. Please try again.\n"
+
+		bao.Console = "Welcome to gitbao!!\n" +
+			"Getting ready to wrap up a tasty new bao.\n"
+
+		bao.Console += "Found some files:\n"
+
+		var isGo bool
+		for _, value := range bao.Files {
+			bao.Console += "    " + value.Filename + "\n"
+			if value.Language == "Go" {
+				isGo = true
+			}
+			if value.Filename == "Baofile" || value.Filename == "baofile" {
+				bao.BaoFileUrl = value.RawUrl
+			}
+		}
+
+		if isGo != true {
+			bao.Console += "Whoops!\n" +
+				"gitbao only supports Go programs at the moment.\n" +
+				"Quitting...."
 			bao.IsComplete = true
-			model.DB.Save(&bao)
-			return
+		} else {
+			bao.Console += "Nice, looks like we can deploy your application\n" +
+				"Modify your config file if needed and hit deploy!\n"
 		}
-	}()
+
+		if bao.IsComplete != true {
+			go func() {
+				var server model.Server
+				query = model.DB.Where("kind = ?", "xiaolong").Find(&server)
+				if query.Error != nil {
+					bao.Console += "Uh oh, we've experienced an error. Please try again.\n"
+					fmt.Println(query.Error)
+					model.DB.Save(&bao)
+					return
+				}
+				bao.ServerId = server.Id
+				model.DB.Save(&bao)
+				getUrl := fmt.Sprintf("http://%s:8002/ready/%d", server.Ip, bao.Id)
+				log.Println(getUrl)
+				resp, err := http.Get(getUrl)
+				log.Printf("%#v", resp)
+				if err != nil || resp.StatusCode != 200 {
+					bao.Console += "Uh oh, we've experienced an error. Please try again.\n"
+					bao.IsComplete = true
+					model.DB.Save(&bao)
+					return
+				}
+			}()
+		}
+	}
 
 	query = model.DB.Save(&bao)
 	if query.Error != nil {
@@ -176,13 +183,6 @@ func BaoHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	RenderTemplate(w, "bao", bao)
 
-}
-
-type pollResponse struct {
-	Subdomain  string
-	Console    string
-	IsReady    bool
-	IsComplete bool
 }
 
 func DeployHandler(w http.ResponseWriter, req *http.Request) {
@@ -210,6 +210,13 @@ func DeployHandler(w http.ResponseWriter, req *http.Request) {
 
 }
 
+type pollResponse struct {
+	Subdomain  string
+	Console    string
+	IsReady    bool
+	IsComplete bool
+}
+
 func PollHandler(w http.ResponseWriter, req *http.Request) {
 	time.Sleep(time.Second * 1)
 
@@ -229,7 +236,7 @@ func PollHandler(w http.ResponseWriter, req *http.Request) {
 	response := pollResponse{
 		IsComplete: bao.IsComplete,
 		Console:    bao.Console,
-		IsReady:    true,
+		IsReady:    bao.IsReady,
 	}
 
 	responseJson, err := json.Marshal(response)
