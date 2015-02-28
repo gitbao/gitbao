@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/gitbao/gitbao/builder"
 	"github.com/gitbao/gitbao/model"
 	"github.com/gorilla/mux"
 )
@@ -75,12 +76,23 @@ func ReadyHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func BuildHandler(w http.ResponseWriter, req *http.Request) {
-	// go func() {
-	// 	err := builder.StartBuild(&bao, server)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// }()
+	vars := mux.Vars(req)
+	baoIdString := vars["bao-id"]
+	baoId, err := strconv.Atoi(baoIdString)
+	if baoIdString == "" || err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Error parsing bao id"))
+		return
+	}
+	var bao model.Bao
+	model.DB.Find(&bao, int64(baoId))
+	go func() {
+		err := builder.StartBuild(&bao, server)
+		if err != nil {
+			// panic(err)
+		}
+	}()
 
 }
 

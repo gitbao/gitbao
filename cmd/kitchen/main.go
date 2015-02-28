@@ -206,6 +206,24 @@ func DeployHandler(w http.ResponseWriter, req *http.Request) {
 	} else if query.Error != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+
+	}
+	var server model.Server
+	query = model.DB.Find(&server, bao.ServerId)
+	if query.Error != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	getUrl := fmt.Sprintf("http://%s:8002/build/%d", server.Ip, bao.Id)
+	log.Println(getUrl)
+	resp, err := http.Get(getUrl)
+	log.Printf("%#v", resp)
+	if err != nil || resp.StatusCode != 200 {
+		bao.Console += "Uh oh, we've experienced an error. Please try again.\n"
+		bao.IsComplete = true
+		model.DB.Save(&bao)
+		return
 	}
 
 }

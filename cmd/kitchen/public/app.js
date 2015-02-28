@@ -21,6 +21,7 @@ function longpoll(url, callback) {
         if (req.readyState == 4) {
             if (req.status == 200) {
                 var response = JSON.parse(req.responseText);
+                writeToBody(response)
                 if (response.IsReady === true && deploying === false) {
                     $('button.deploy').attr('disabled', false);
                 }
