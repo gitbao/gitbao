@@ -88,7 +88,7 @@ func CreateHandler(w http.ResponseWriter, req *http.Request) {
 		w, req,
 		fmt.Sprintf(
 			"http://%s/bao/%s/",
-			strings.Join(host_parts[1:], ""),
+			strings.Join(host_parts[1:], "."),
 			base36Id,
 		),
 		302,
