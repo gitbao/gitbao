@@ -233,6 +233,7 @@ type pollResponse struct {
 	Console    string
 	IsReady    bool
 	IsComplete bool
+	Url        string
 }
 
 func PollHandler(w http.ResponseWriter, req *http.Request) {
@@ -251,10 +252,18 @@ func PollHandler(w http.ResponseWriter, req *http.Request) {
 	var bao model.Bao
 	model.DB.Find(&bao, int64id)
 
+	var location model.Location
+	model.DB.Find(&location, bao.Id)
+
+	var url string
+	if location.Subdomain != "" {
+		url = location.Subdomain + ".gitbao.com"
+	}
 	response := pollResponse{
 		IsComplete: bao.IsComplete,
 		Console:    bao.Console,
 		IsReady:    bao.IsReady,
+		Url:        url,
 	}
 
 	responseJson, err := json.Marshal(response)
