@@ -166,7 +166,10 @@ func writeToBao(b *model.Bao, text string, isComplete bool) error {
 
 func configDocker(d *model.Docker) error {
 	var lastDocker model.Docker
-	query := model.DB.Order("port desc").Not("port = ?", 0).Where("server_id = ?", 5).First(&lastDocker)
+	query := model.DB.Order("port desc").
+		Not("port = ?", 0).
+		Where("server_id = ?", d.ServerId).
+		First(&lastDocker)
 	if query.Error != nil && query.Error != gorm.RecordNotFound {
 		return query.Error
 	}
