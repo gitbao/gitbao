@@ -30,8 +30,11 @@ a:hover {
 .nav li a {
     text-decoration: none;
 }
-img {
-    padding-top: 50px;
+.landing img {
+    padding-top: 20px;
+}
+.landing {
+    font-size: 17px;
 }
 pre.console {
     font-size: 14px;
