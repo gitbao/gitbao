@@ -43,3 +43,65 @@ Contain's Bao's. Can be triggered to create a new Bao, or provide logs/informati
  - Server is up for 24 hrs, more if you want it. Can log in to set up auto-updates, env variables, and other options. 
  - https://developer.github.com/v3/activity/events/types/#gistevent
  - https://developer.github.com/v3/auth/#via-oauth-tokens
+
+## Mac: Quickstart
+
+Make sure that your PATH includes the PostGres command line tools. For the PostGres command line tools to work, you'll need to have PGDATA assigned. Then start PostGres.
+
+```
+export PATH=$PATH:'/Applications/Postgres.app/Contents/Versions/9.4/bin'
+export PGDATA='/Users/Andrew/Library/Application Support/Postgres/var-9.4'
+pg_ctl start
+```
+
+Mac can't run Docker, so boot2docker runs a linux VM in the background that docker connects to.
+
+```
+boot2docker init
+boot2docker start
+```
+
+Assign GOPATH to something reasonable, then download gitbao and it's dependencies.
+
+```
+# Optional
+export GOPATH="/usr/local/lib"
+mkdir -p $GOPATH
+
+# Not Optional
+go get github.com/gitbao/gitbao
+cd $GOPATH/src/github.com/gitbao/gitbao
+go get ./...
+```
+
+In one terminal window start Kitchen, which is the main webapp.
+
+```
+# Optionally use tmux because it's awesome.
+tmux new-session -s kitchen
+
+# Load the boot2docker env and start kitchen.
+$(boot2docker shellinit)
+cd $GOPATH/src/github.com/gitbao/gitbao/cmd
+go run kitchen/main.go
+```
+
+In another terminal window start Xialong, which creates baos.
+
+```
+# Optionally use tmux because it's awesome.
+tmux new-session -s xiaolong
+
+# Load the boot2docker env and start xiaolong.
+$(boot2docker shellinit)
+cd $GOPATH/src/github.com/gitbao/gitbao/cmd
+go run xiaolong/main.go
+```
+
+### Troubleshooting
+
+Make sure that no other docker instances exist when starting gitbao.
+
+```
+docker rm -f $(docker ps -a -q)
+```

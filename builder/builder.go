@@ -83,7 +83,18 @@ EXPOSE 8080
 
 func BuildDockerfile(b *model.Bao, path string, docker model.Docker) (
 	dockerId string, err error) {
-	cmd := exec.Command("sudo", "docker", "build", "-t", "outyet", path)
+	
+	var Env string = os.Getenv("GO_ENV")
+	var cmd *exec.Cmd;
+
+	buildCommands := []string{"sudo", "docker", "build", "-t", "outyet", path}
+	if Env == "production" {
+		// The Production Environment runs Docker as sudo
+		cmd = exec.Command(buildCommands[0], buildCommands[1:]...)
+	} else {
+		cmd = exec.Command(buildCommands[1], buildCommands[2:]...)
+	}
+
 	var stdobuild bytes.Buffer
 	// var stdebuild bytes.Buffer
 	cmd.Stdout = &stdobuild
@@ -97,14 +108,20 @@ func BuildDockerfile(b *model.Bao, path string, docker model.Docker) (
 	}
 
 	writeToBao(b, "Application built successfully\nStarting application:", false)
-
 	// writeToBao(b, string(stdobuild.Bytes()))
-	cmd = exec.Command("sudo", "docker", "run",
+
+	startCommands := []string{"sudo", "docker", "run",
 		"--publish", fmt.Sprintf("%d:8080", docker.Port),
 		"--name", path,
 		"--detach",
-		"outyet",
-	)
+		"outyet"}
+	if Env == "production" {
+		// The Production Environment runs Docker as sudo
+		cmd = exec.Command(startCommands[0], startCommands[1:]...)
+	} else {
+		cmd = exec.Command(startCommands[1], startCommands[2:]...)
+	}
+
 	output, err := cmd.Output()
 	dockerId = string(output)
 	fmt.Println(dockerId)
