@@ -33,7 +33,7 @@ func main() {
 	r.HandleFunc("/bao/{id-base36}/", BaoHandler).Methods("GET")
 	r.HandleFunc("/poll/{id}/", PollHandler).Methods("GET")
 	r.HandleFunc("/deploy/{id}/", DeployHandler).Methods("POST")
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir(goPath + "src/github.com/gitbao/gitbao/cmd/kitchen/public/")))
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir(goPath + "/src/github.com/gitbao/gitbao/cmd/kitchen/public/")))
 	http.Handle("/", Middleware(r))
 	fmt.Println("Broadcasting Kitchen on port 8000")
 	http.ListenAndServe(":8000", nil)
